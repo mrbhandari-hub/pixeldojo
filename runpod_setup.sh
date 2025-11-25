@@ -26,7 +26,7 @@ else
     git clone https://github.com/comfyanonymous/ComfyUI.git
     COMFY_DIR="/workspace/ComfyUI"
     cd ComfyUI
-    pip install -r requirements.txt
+    pip install --break-system-packages -r requirements.txt
 fi
 
 cd "$COMFY_DIR"
@@ -54,11 +54,11 @@ cd ComfyUI-VideoHelperSuite
 
 # Install VHS dependencies
 echo "Installing VideoHelperSuite dependencies..."
-pip install imageio imageio-ffmpeg opencv-python-headless
+pip install --break-system-packages imageio imageio-ffmpeg opencv-python-headless
 
 # Check if requirements.txt exists and install
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+    pip install --break-system-packages -r requirements.txt
 fi
 
 # Run install.py if it exists
@@ -75,7 +75,7 @@ if [ ! -d "ComfyUI-WanVideoWrapper" ]; then
     git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git
     cd ComfyUI-WanVideoWrapper
     if [ -f "requirements.txt" ]; then
-        pip install -r requirements.txt
+        pip install --break-system-packages -r requirements.txt
     fi
     cd ..
 fi
