@@ -249,4 +249,3 @@ class LocalComfyUIGenerator(VideoGenerator):
             time.sleep(2)
         
         return None
-
