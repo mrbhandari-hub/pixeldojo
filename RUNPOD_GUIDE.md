@@ -35,16 +35,13 @@ This guide will help you set up a powerful, cost-effective cloud backend for Pix
 
 ```bash
 cd /workspace
-wget https://raw.githubusercontent.com/rahulbhandari/pixeldojo/main/runpod_setup.sh
-# OR, since you don't have the repo pushed yet, copy-paste the content of runpod_setup.sh
-# Create the file:
-nano setup.sh
-# (Paste the content of runpod_setup.sh from your local project)
-# Save and exit (Ctrl+O, Enter, Ctrl+X)
+# Clone your repository
+git clone https://github.com/mrbhandari-hub/pixeldojo.git
+cd pixeldojo
 
-# Make it executable and run
-chmod +x setup.sh
-./setup.sh
+# Make the script executable and run it
+chmod +x runpod_setup.sh
+./runpod_setup.sh
 ```
 
 4.  Wait for the downloads to finish (this will take 10-20 minutes depending on speed).
@@ -52,8 +49,11 @@ chmod +x setup.sh
 ## Step 4: Connect PixelDojo
 1.  Once setup is done, start ComfyUI in the RunPod terminal:
     ```bash
-    python main.py --listen 0.0.0.0 --port 8188
+    cd /workspace/ComfyUI
+    python3 main.py --listen 0.0.0.0 --port 8188
     ```
+    > **Note:** If you see `OSError: [Errno 98] address already in use`, it means ComfyUI is already running in the background. Run `pkill -f main.py` to stop it, then try again.
+
 2.  Go back to your RunPod dashboard.
 3.  Click **Connect** > **TCP Port Mappings**.
 4.  Find the public IP and port mapping for 8188 (e.g., `123.45.67.89:12345`).

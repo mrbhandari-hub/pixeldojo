@@ -11,51 +11,55 @@
   },
   "2": {
     "inputs": {
-      "text": "a beautiful scene",
-      "clip": [
-        "4",
-        0
-      ]
+      "clip_name": "clip_vision_h.safetensors"
     },
-    "class_type": "CLIPTextEncode",
+    "class_type": "CLIPVisionLoader",
     "_meta": {
-      "title": "Prompt"
+      "title": "Load CLIP Vision"
     }
   },
   "3": {
     "inputs": {
-      "text": "low quality, blurry, distorted",
-      "clip": [
-        "4",
-        0
-      ]
+      "clip_vision": ["2", 0],
+      "image": ["1", 0],
+      "crop": "center"
+    },
+    "class_type": "CLIPVisionEncode",
+    "_meta": {
+      "title": "CLIP Vision Encode"
+    }
+  },
+  "4": {
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load T5 Text Encoder"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "cinematic video with smooth natural motion",
+      "clip": ["4", 0]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "static, blurry, low quality, distorted, watermark, text",
+      "clip": ["4", 0]
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "Negative Prompt"
     }
   },
-  "4": {
-    "inputs": {
-      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
-      "type": "sd3"
-    },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "Load T5 Encoder"
-    }
-  },
-  "5": {
-    "inputs": {
-      "unet_name": "wan2.1_i2v_480p_14B_fp16.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Wan Model"
-    }
-  },
-  "6": {
+  "7": {
     "inputs": {
       "vae_name": "wan_2.1_vae.safetensors"
     },
@@ -64,83 +68,74 @@
       "title": "Load VAE"
     }
   },
-  "7": {
+  "8": {
     "inputs": {
-      "pixels": [
-        "1",
-        0
-      ],
-      "vae": [
-        "6",
-        0
-      ]
+      "unet_name": "wan2.1_i2v_480p_14B_fp16.safetensors",
+      "weight_dtype": "default"
     },
-    "class_type": "VAEEncode",
+    "class_type": "UNETLoader",
     "_meta": {
-      "title": "Encode Image"
+      "title": "Load Wan I2V Model"
     }
   },
-  "8": {
+  "9": {
+    "inputs": {
+      "positive": ["5", 0],
+      "negative": ["6", 0],
+      "vae": ["7", 0],
+      "width": 832,
+      "height": 480,
+      "length": 81,
+      "batch_size": 1,
+      "clip_vision_output": ["3", 0],
+      "start_image": ["1", 0]
+    },
+    "class_type": "WanImageToVideo",
+    "_meta": {
+      "title": "Wan Image To Video"
+    }
+  },
+  "10": {
     "inputs": {
       "seed": 0,
       "steps": 30,
-      "cfg": 6.0,
+      "cfg": 5.0,
       "sampler_name": "euler",
-      "scheduler": "simple",
+      "scheduler": "normal",
       "denoise": 1.0,
-      "model": [
-        "5",
-        0
-      ],
-      "positive": [
-        "2",
-        0
-      ],
-      "negative": [
-        "3",
-        0
-      ],
-      "latent_image": [
-        "7",
-        0
-      ]
+      "model": ["8", 0],
+      "positive": ["9", 0],
+      "negative": ["9", 1],
+      "latent_image": ["9", 2]
     },
     "class_type": "KSampler",
     "_meta": {
       "title": "KSampler"
     }
   },
-  "9": {
+  "11": {
     "inputs": {
-      "samples": [
-        "8",
-        0
-      ],
-      "vae": [
-        "6",
-        0
-      ]
+      "samples": ["10", 0],
+      "vae": ["7", 0]
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "Decode Video"
+      "title": "VAE Decode"
     }
   },
-  "10": {
+  "12": {
     "inputs": {
-      "frame_rate": 16,
+      "images": ["11", 0],
+      "frame_rate": 16.0,
       "loop_count": 0,
-      "filename_prefix": "pixeldojo_wan",
+      "filename_prefix": "pixeldojo",
       "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": true,
       "pix_fmt": "yuv420p",
       "crf": 19,
       "save_metadata": true,
-      "pingpong": false,
-      "save_output": true,
-      "images": [
-        "9",
-        0
-      ]
+      "trim_to_audio": false
     },
     "class_type": "VHS_VideoCombine",
     "_meta": {

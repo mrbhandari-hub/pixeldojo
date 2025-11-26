@@ -7,6 +7,9 @@ import shutil
 import os
 from typing import Optional
 from .generator import LocalComfyUIGenerator
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="PixelDojo API", version="1.0.0")
 
@@ -43,10 +46,10 @@ async def health():
     return {"status": "healthy"}
 
 
-def generate_video_task(job_id: str, image_path: str, prompt: str, duration: int):
+def generate_video_task(job_id: str, image_path: str, prompt: str, duration: int, fast_mode: bool = False):
     """Background task for video generation"""
     try:
-        video_path = generator.generate(image_path, prompt, duration)
+        video_path = generator.generate(image_path, prompt, duration, fast_mode=fast_mode)
         
         if video_path:
             job_status[job_id] = {
@@ -76,10 +79,14 @@ async def generate_video(
     background_tasks: BackgroundTasks,
     image: UploadFile = File(...),
     prompt: str = Form(...),
-    duration: int = Form(30)
+    duration: int = Form(30),
+    fast_mode: str = Form("false")
 ):
     """Generate a video from an uploaded image and prompt"""
     job_id = str(uuid.uuid4())
+    
+    # Parse fast_mode from string to boolean
+    is_fast_mode = fast_mode.lower() == "true"
     
     # Save uploaded image
     upload_dir = Path("uploads")
@@ -93,12 +100,12 @@ async def generate_video(
     job_status[job_id] = {
         "status": "processing",
         "progress": 0,
-        "message": "Starting generation...",
+        "message": f"Starting generation...{' (Fast Mode)' if is_fast_mode else ''}",
         "video_path": None
     }
     
     # Start background task
-    background_tasks.add_task(generate_video_task, job_id, str(image_path), prompt, duration)
+    background_tasks.add_task(generate_video_task, job_id, str(image_path), prompt, duration, is_fast_mode)
     
     return {
         "job_id": job_id,

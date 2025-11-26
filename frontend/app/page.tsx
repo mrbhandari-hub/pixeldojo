@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Download, Loader2, Image as ImageIcon, Sparkles, Wand2, Film } from 'lucide-react';
+import { Upload, Play, Download, Loader2, Image as ImageIcon, Sparkles, Wand2, Film, Zap } from 'lucide-react';
 
 const API_URL = 'http://localhost:8001';
 
 export default function Home() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(30);
+  const [prompt, setPrompt] = useState('show them dancing');
+  const [duration, setDuration] = useState(5);
+  const [fastMode, setFastMode] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle');
   const [progress, setProgress] = useState(0);
@@ -56,14 +57,31 @@ export default function Home() {
     e.preventDefault();
   };
 
+  const loadSampleImage = async () => {
+    try {
+      const response = await fetch('/test_image.png');
+      const blob = await response.blob();
+      const file = new File([blob], 'test_image.png', { type: 'image/png' });
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error loading sample image:', error);
+      alert('Failed to load sample image');
+    }
+  };
+
   const pollStatus = async (id: string) => {
     try {
       const response = await fetch(`${API_URL}/status/${id}`);
       const data = await response.json();
-      
+
       setProgress(data.progress || 0);
       setMessage(data.message || '');
-      
+
       if (data.status === 'completed') {
         setStatus('completed');
         setVideoUrl(`${API_URL}/video/${id}`);
@@ -96,6 +114,7 @@ export default function Home() {
     formData.append('image', image);
     formData.append('prompt', prompt);
     formData.append('duration', duration.toString());
+    formData.append('fast_mode', fastMode.toString());
 
     try {
       const response = await fetch(`${API_URL}/generate`, {
@@ -109,12 +128,12 @@ export default function Home() {
 
       const data = await response.json();
       setJobId(data.job_id);
-      
+
       // Start polling for status
       statusIntervalRef.current = setInterval(() => {
         pollStatus(data.job_id);
       }, 2000);
-      
+
       // Poll immediately
       pollStatus(data.job_id);
     } catch (error) {
@@ -138,7 +157,7 @@ export default function Home() {
   return (
     <div className="min-h-screen text-slate-200 selection:bg-purple-500/30">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
-        
+
         {/* Header */}
         <header className="text-center mb-16 animate-float">
           <div className="inline-flex items-center justify-center p-3 mb-4 rounded-full glass-panel bg-purple-500/10 border-purple-500/20">
@@ -155,10 +174,10 @@ export default function Home() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Left Column: Controls */}
           <div className="lg:col-span-5 space-y-6">
-            
+
             {/* Image Upload Card */}
             <div className="glass-panel rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]">
               <div className="flex items-center justify-between mb-4">
@@ -179,15 +198,15 @@ export default function Home() {
                   </button>
                 )}
               </div>
-              
+
               <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onClick={() => !image && fileInputRef.current?.click()}
                 className={`
                   relative group cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300 overflow-hidden
-                  ${imagePreview 
-                    ? 'border-transparent h-64' 
+                  ${imagePreview
+                    ? 'border-transparent h-64'
                     : 'border-slate-700 hover:border-purple-500/50 hover:bg-slate-800/50 h-48 flex flex-col items-center justify-center'
                   }
                 `}
@@ -220,6 +239,16 @@ export default function Home() {
                   className="hidden"
                 />
               </div>
+
+              {!image && (
+                <button
+                  onClick={loadSampleImage}
+                  className="mt-3 w-full py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Use Sample Image
+                </button>
+              )}
             </div>
 
             {/* Settings Card */}
@@ -228,7 +257,7 @@ export default function Home() {
                 <Wand2 className="w-5 h-5 text-purple-400" />
                 Generation Settings
               </h2>
-              
+
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm text-slate-400 mb-2">Prompt</label>
@@ -258,6 +287,37 @@ export default function Home() {
                     <span>5s</span>
                     <span>60s</span>
                   </div>
+                </div>
+
+                {/* Fast Mode Toggle */}
+                <div className="pt-2 border-t border-slate-800">
+                  <button
+                    onClick={() => setFastMode(!fastMode)}
+                    className={`
+                      w-full py-3 px-4 rounded-xl font-medium text-sm transition-all duration-300 flex items-center justify-between
+                      ${fastMode 
+                        ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300' 
+                        : 'bg-slate-800/50 border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Zap className={`w-4 h-4 ${fastMode ? 'text-amber-400' : 'text-slate-500'}`} />
+                      <span>Fast Mode</span>
+                    </div>
+                    <div className={`
+                      w-10 h-5 rounded-full transition-all duration-300 relative
+                      ${fastMode ? 'bg-amber-500' : 'bg-slate-700'}
+                    `}>
+                      <div className={`
+                        absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300
+                        ${fastMode ? 'left-5' : 'left-0.5'}
+                      `} />
+                    </div>
+                  </button>
+                  <p className="text-xs text-slate-600 mt-2 text-center">
+                    {fastMode ? '⚡ ~3x faster • 15 steps, FP8, lower res' : 'Standard quality • ~4-5 min per clip'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -292,7 +352,7 @@ export default function Home() {
           {/* Right Column: Output */}
           <div className="lg:col-span-7">
             <div className="glass-panel rounded-2xl p-1 h-full min-h-[600px] flex flex-col relative overflow-hidden">
-              
+
               {/* Status Overlay */}
               {status === 'processing' && (
                 <div className="absolute inset-0 z-20 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
@@ -304,7 +364,7 @@ export default function Home() {
                     </div>
                     <h3 className="text-2xl font-bold text-white">Creating your masterpiece</h3>
                     <p className="text-slate-400">{message}</p>
-                    
+
                     <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden mt-8">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-500 ease-out"

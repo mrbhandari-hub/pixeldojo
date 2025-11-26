@@ -6,3 +6,4 @@ requests==2.31.0
 pydantic==2.5.3
 websocket-client==1.6.4
 
+python-dotenv==1.0.0

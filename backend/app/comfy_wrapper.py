@@ -21,16 +21,24 @@ class ComfyUIWrapper:
     def is_running(self) -> bool:
         """Check if ComfyUI is running"""
         try:
-            response = requests.get(f"{self.base_url}/system_stats", timeout=2)
+            response = requests.get(f"{self.base_url}/system_stats", timeout=10)
             return response.status_code == 200
-        except:
+        except Exception as e:
+            print(f"DEBUG: is_running check failed: {e}")
             return False
     
     def start(self) -> bool:
         """Start ComfyUI server"""
+        print(f"DEBUG: Checking connection to ComfyUI at {self.base_url}")
         if self.is_running():
-            print("ComfyUI is already running")
+            print("ComfyUI is running/accessible")
             return True
+        
+        # If using a remote URL, don't try to start a local process
+        if os.getenv("COMFYUI_URL"):
+            print(f"ERROR: Could not connect to remote ComfyUI at {self.base_url}")
+            print("Please check if the RunPod instance is running and the port is correct.")
+            return False
         
         venv_python = self.comfyui_path / "venv" / "bin" / "python"
         if not venv_python.exists():
@@ -79,16 +87,39 @@ class ComfyUIWrapper:
         }
         
         try:
+            print(f"DEBUG: Sending workflow to {self.base_url}/prompt")
             response = requests.post(
                 f"{self.base_url}/prompt",
                 json=prompt_data,
-                timeout=10
+                timeout=30
             )
-            response.raise_for_status()
+            
+            # Check for errors in response
             result = response.json()
-            return result.get("prompt_id")
+            
+            if "error" in result:
+                print(f"ERROR from ComfyUI: {result['error']}")
+                if "node_errors" in result:
+                    for node_id, errors in result["node_errors"].items():
+                        print(f"  Node {node_id}: {errors}")
+                return None
+            
+            if response.status_code != 200:
+                print(f"ERROR: ComfyUI returned status {response.status_code}")
+                print(f"Response: {result}")
+                return None
+                
+            prompt_id = result.get("prompt_id")
+            print(f"DEBUG: Got prompt_id: {prompt_id}")
+            return prompt_id
+            
+        except requests.exceptions.RequestException as e:
+            print(f"ERROR: Network error queueing prompt: {e}")
+            return None
         except Exception as e:
-            print(f"Error queueing prompt: {e}")
+            print(f"ERROR: Unexpected error queueing prompt: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def get_history(self, prompt_id: str) -> Optional[Dict[str, Any]]:
@@ -125,18 +156,23 @@ class ComfyUIWrapper:
         
         try:
             with open(image_path, 'rb') as f:
-                files = {'image': f}
+                files = {'image': (os.path.basename(image_path), f, 'image/png')}
                 data = {'overwrite': 'true'}
+                print(f"DEBUG: Uploading to {self.base_url}/upload/image")
                 response = requests.post(
                     f"{self.base_url}/upload/image",
                     files=files,
                     data=data,
-                    timeout=30
+                    timeout=60
                 )
+                print(f"DEBUG: Upload response status: {response.status_code}")
                 response.raise_for_status()
                 result = response.json()
+                print(f"DEBUG: Upload result: {result}")
                 return result.get("name")
         except Exception as e:
             print(f"Error uploading image: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
